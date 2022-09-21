@@ -34,9 +34,9 @@ pmap = xBinnedPolarizationMapCube.from_file_list(_file_list())
 #pmap.plot_significance()
 mask = pmap.MDP_99<0.2
 mask = mask[0]
-pmap.plot_mdp_map()
-plt.show()
-input()
+#pmap.plot_mdp_map()
+#plt.show()
+#input()
 
 def statistics():
     smaps = []
@@ -46,8 +46,6 @@ def statistics():
         smaps.append(signif)
     return (smaps)
 
-#def img_mean(maps, param):
-#    numpy.average (maps[j].SIGNIF[0])
 
 smaps = statistics()
 smaps = numpy.array(smaps)
@@ -60,6 +58,10 @@ plt.colorbar()
 plt.figure('maximum')
 plt.imshow(numpy.max((smaps), axis=0), origin = 'lower')
 plt.colorbar()
+sigmas = 2
+overthresh = 100.*(smaps>sigmas).sum(axis=0)/len(smaps)
+plt.figure ('Over threshold (percentage)')
+plt.imshow(overthresh, origin = 'lower')
 plt.show()
 input()
 plt.close()
@@ -67,7 +69,7 @@ bins = numpy.linspace(1,6, num=50)
 #for j in range (25):
 #    for i in range (25):
 #        plt.hist(smaps[:,j,i], bins = bins)
-plt.hist(smaps.reshape(31250), bins=bins)
+plt.hist(smaps.reshape(22050), bins=bins)
 plt.show()
 
 
