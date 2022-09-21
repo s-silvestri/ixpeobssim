@@ -47,7 +47,6 @@ plt.show()
 plt.figure('Mask')
 plt.imshow(mask, origin = 'lower')
 plt.show()
-input()
 
 def statistics():
     smaps = []
@@ -82,6 +81,8 @@ bins = numpy.linspace(1,6, num=50)
 #    for i in range (25):
 #        plt.hist(smaps[:,j,i], bins = bins)
 plt.hist(smaps.reshape(220500), bins=bins)
+plt.ylabel ('counts')
+plt.xlabel('sigma')
 plt.show()
 
 
