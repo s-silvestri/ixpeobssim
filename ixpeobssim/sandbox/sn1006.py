@@ -17,26 +17,37 @@ from ixpeobssim.binning.polarization import xBinnedPolarizationMapCube
 #plt.xscale('log')
 #plt.yscale('log')
 #plt.show()
-SIMS = numpy.arange (50)
+SIMS = numpy.arange (500)
+SUBSIMS = numpy.arange(50)
 DU_ID = 2
 DU_IDS = [1,2,3]
 
-file_path = '/media/kibuzo/80a7f701-fd11-4c0c-993a-76b511ae8b86/sn1006'
+file_path = '/media/kibuzo/80a7f701-fd11-4c0c-993a-76b511ae8b86/sn1006/tantemappe'
 
 def _file_name (sim_idx, du_id):
     return f'xpphotonlist_{sim_idx}__du{du_id}_photon_list_ixpesim_recon_simfmt_pmap.fits'
+
+def _file_name (sim_idx, du_id):
+    return f'xpphotonlist_{sim_idx}__du{du_id}_pmap.fits'
     
 def _file_list():
-    return [os.path.join(file_path, _file_name(sim_idx, DU_ID)) for  sim_idx in SIMS]
+    return [os.path.join(file_path, _file_name(sim_idx, DU_ID)) for sim_idx in SIMS]
 
-pmap = xBinnedPolarizationMapCube.from_file_list(_file_list())
+def _file_list_small():
+    return [os.path.join(file_path, _file_name(sim_idx, DU_ID)) for sim_idx in SUBSIMS]
+
+pmap = xBinnedPolarizationMapCube.from_file_list(_file_list_small())
 #pmap.plot_polarization_degree(arrows = None, num_sigma = 1)
 #pmap.plot_significance()
 mask = pmap.MDP_99<0.2
 mask = mask[0]
-#pmap.plot_mdp_map()
-#plt.show()
-#input()
+pmap.plot_stokes_parameters()
+pmap.plot_mdp_map()
+plt.show()
+plt.figure('Mask')
+plt.imshow(mask, origin = 'lower')
+plt.show()
+input()
 
 def statistics():
     smaps = []
@@ -58,10 +69,11 @@ plt.colorbar()
 plt.figure('maximum')
 plt.imshow(numpy.max((smaps), axis=0), origin = 'lower')
 plt.colorbar()
-sigmas = 2
+sigmas = 2.5
 overthresh = 100.*(smaps>sigmas).sum(axis=0)/len(smaps)
 plt.figure ('Over threshold (percentage)')
 plt.imshow(overthresh, origin = 'lower')
+plt.colorbar()
 plt.show()
 input()
 plt.close()
@@ -69,7 +81,7 @@ bins = numpy.linspace(1,6, num=50)
 #for j in range (25):
 #    for i in range (25):
 #        plt.hist(smaps[:,j,i], bins = bins)
-plt.hist(smaps.reshape(22050), bins=bins)
+plt.hist(smaps.reshape(220500), bins=bins)
 plt.show()
 
 
