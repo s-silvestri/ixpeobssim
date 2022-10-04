@@ -30,8 +30,8 @@ CONV_NSIDE = 15 # pixels
 
 PIXEL_SIZE = arcmin_to_arcsec(IMG_SIZE / NUM_PIXELS)
 
-l2_path = '/work/msh_1552/01001101/event_l2'
-l1_path = '/work/msh_1552/01001101/event_l1'
+l2_path = '/media/kibuzo/80a7f701-fd11-4c0c-993a-76b511ae8b86/observations/msh_1552/01001101/event_l2'
+l1_path = '/media/kibuzo/80a7f701-fd11-4c0c-993a-76b511ae8b86/observations/msh_1552/01001101/event_l1'
 work = 'work'
 workdir = os.path.join(l2_path, work)
 
@@ -57,7 +57,7 @@ def _create_pmaps(nside, emin, emax, img_size=IMG_SIZE, overwrite=True):
     pipeline.xpbin(*_l2_file_list(), algorithm='PMAP', overwrite=overwrite, **kwargs)
 
 
-def plot_convolved_pmap(size, pmap, sigma = 3):
+def plot_convolved_pmap(size, pmap, sigma = 3, suffix = ''):
     kernelsize = size
     #pmap = xBinnedPolarizationMapCube.from_file_list(_map_file_list('pmap', '200_2_8'))
     kernel = circular_kernel(kernelsize)
@@ -66,16 +66,16 @@ def plot_convolved_pmap(size, pmap, sigma = 3):
     pmap.plot_polarization_degree(arrows = None, num_sigma = sigma)
     #psf = plt.Circle((10,10), size/2., color = 'r', label = 'Convolution kernel', fill = False)
     #plt.add_patch(psf)
-    plt.savefig(os.path.join(workdir, 'pd_200_2_8_' + str(size)))
+    plt.savefig(os.path.join(workdir, 'pd_200_2_8_' + str(size) + suffix))
     plt.close()
     pmap.plot_significance()
-    plt.savefig(os.path.join(workdir, 'sig_200_2_8_' + str(size)))
+    plt.savefig(os.path.join(workdir, 'sig_200_2_8_' + str(size) + suffix))
     plt.close()
     pmap.plot_mdp_map()
-    plt.savefig(os.path.join(workdir, 'mdp99_200_2_8_' + str(size)))
+    plt.savefig(os.path.join(workdir, 'mdp99_200_2_8_' + str(size) + suffix))
     plt.close()
     pmap.plot_polarization_angle(num_sigma = sigma)
-    plt.savefig(os.path.join(workdir, 'pa_200_2_8_' + str(size)))
+    plt.savefig(os.path.join(workdir, 'pa_200_2_8_' + str(size) + suffix))
     plt.close()
     pmap.plot_stokes_parameters()
     plt.show()
@@ -130,7 +130,7 @@ def subtract (polcube, dark):
     pmap.U[0] -= dark_U
     return (pmap)
 
-def cleanup(l2, l1, y0 = 0.78):
+def cleanup(l2, l1, y0 = 0.85):
     ''' Do the filtering of l2 events based on l1 parameters.
     Based on carmelo's. Full paths to the single data file have to be
     specified.
@@ -145,6 +145,8 @@ def cleanup(l2, l1, y0 = 0.78):
     trk_size = mySource.l1value("TRK_SIZE")
     trk_bord = mySource.l1value("TRK_BORD")
     evt_fra  = mySource.l1value("EVT_FRA")
+    evt_x = mySource.l1value('ABSX')
+    evt_y = mySource.l1value('ABSY')
     cut_enerange = numpy.logical_and(energy>2, energy<8)
     x = numpy.linspace(2,8,10)
     y_cut = (x<4)*(0.07*(x-4)) + (0.008*(x-4))*(x>=4) + y0
@@ -162,12 +164,12 @@ def cleanup(l2, l1, y0 = 0.78):
 
     plt.subplot(131)
     plt.title("All evt")
-    plt.hist2d(ra[cut_enerange],
-           dec[cut_enerange],
+    plt.hist2d(ra[cut_enerange],dec[cut_enerange],
            bins=100, norm=LogNorm())
     plt.xlabel("RA")
     plt.ylabel("DEC")
     plt.colorbar()
+
     plt.subplot(132)
     plt.title("Sgn (efra cut) evt")
     plt.hist2d(ra[numpy.logical_and(cut_enerange, cut_efra)],
@@ -193,6 +195,29 @@ def cleanup(l2, l1, y0 = 0.78):
     plt.xlabel("Energy [keV]")
     plt.ylabel("NUM_PIX")
 
+    plt.figure("absorption point")
+    plt.subplot(221)
+    plt.hist2d(evt_x[cut_efra], evt_y[cut_efra], bins=(100, 100))
+    plt.xlabel("X absorption point (clean)")
+    plt.ylabel("Y absorption point (clean)")
+    plt.colorbar()
+    plt.subplot(222)
+    plt.hist2d(evt_x[~cut_efra], evt_y[~cut_efra], bins=(100, 100))
+    plt.xlabel("X absorption point (bkg)")
+    plt.ylabel("Y absorption point (bkg)")
+    plt.colorbar()
+    plt.subplot(223)
+    plt.hist(evt_x[~cut_efra], bins=100)
+    plt.xlabel('X absorption point')
+    plt.ylabel('counts')
+    plt.xlim((-7,7))
+    plt.subplot(224)
+    plt.hist(evt_y[~cut_efra], bins=100)
+    plt.xlabel('Y absorption point')
+    plt.ylabel('counts')
+    plt.xlim((-7,7))
+    
+
     plt.figure("TRKBORD")
     plt.hist2d(energy[cut_efra], trk_bord[cut_efra],
            range=((0,10),(0,50)), bins=(100, 50), norm=LogNorm())
@@ -208,19 +233,28 @@ def cleanup(l2, l1, y0 = 0.78):
         a = numpy.float64(a)
         cleanup(l2, l1, y0 = a)
 
-def fits_filter (fits_file, mask):
+def fits_filter (fits_file, mask, suffix = 'clean'):
     event_file = xEventFile(fits_file)
     event_file.filter(mask)
-    event_file.write(fits_file + 'clean', overwrite = 'True')
+    event_file.write(fits_file + suffix, overwrite = 'True')
 
 DU = 3
+# # Signal extraction and display scripts
 good_events = cleanup(glob(f'{l2_path}/*det{DU}*v01.fits'), glob(f'{l1_path}/*det{DU}*v01.fits'))
+
 #print (numpy.shape(good_events))
 #print (numpy.sum(good_events))
 #input()
-fits_filter(glob(f'{l2_path}/*det{DU}*v01.fits')[0], good_events)
+#fits_filter(glob(f'{l2_path}/*det{DU}*v01.fits')[0], good_events, 'clean')
 #_create_pmaps(200, 2, 8)
-plot_convolved_pmap(15, xBinnedPolarizationMapCube.from_file_list(_map_file_list('clean_pmap', '')))
-pmap_dirs = glob(f'{l2_path}/ixpe01001101_det*clean_pmap.fits')
-reg_dir = os.path.join(l2_path, 'background2.reg')
+#plot_convolved_pmap(15, xBinnedPolarizationMapCube.from_file_list(_map_file_list('clean_pmap', '')), suffix = '_signal')
+#pmap_dirs = glob(f'{l2_path}/ixpe01001101_det*clean_pmap.fits')
+#reg_dir = os.path.join(l2_path, 'background2.reg')
 #plot_convolved_pmap(15, subtract(pmap_dirs, reg_dir))
+
+# # Noise extraction and display scritps
+#bad_events = ~good_events
+#bad_events = ~cleanup(glob(f'{l2_path}/*det{DU}*v01.fits'), glob(f'{l1_path}/*det{DU}*v01.fits'))
+#fits_filter(glob(f'{l2_path}/*det{DU}*v01.fits')[0], bad_events, 'noise')
+#plot_convolved_pmap(15, xBinnedPolarizationMapCube.from_file_list(_map_file_list('noise_pmap', '')), suffix = '_noise')
+
