@@ -105,7 +105,13 @@ def xpphase(**kwargs):
         logger.info('Opening "%s"...', file_path)
         hdu = fits.open(file_path)
         evt_hdu = hdu['EVENTS']
-        time_ = evt_hdu.data['TIME']
+        # Load time from BARYTIME columns if exists, else default to TIME
+        if 'BARYTIME' in evt_hdu.data.names:
+            time_ = evt_hdu.data['BARYTIME']
+            logger.info('Loading time column from BARYTIME...')
+        else:
+            time_ = evt_hdu.data['TIME']
+            logger.info('BARYTIME not found, defaulting to TIME column')
         evt_header = evt_hdu.header
 
         logger.info('Calculating pulsar phase...')
